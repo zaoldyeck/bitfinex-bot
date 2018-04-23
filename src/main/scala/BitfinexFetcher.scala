@@ -1,6 +1,6 @@
 import Extension._
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.libs.ws.JsonBodyReadables._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -9,10 +9,15 @@ class BitfinexFetcher(implicit ec: ExecutionContext) {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   implicit val candleReads = Json.reads[Candle]
 
-  def getAllSymbols: Future[List[String]] = {
-    Http.client.url("https://api.bitfinex.com/v1/symbols").get.map {
+  def getAllSymbols: Future[List[Symbol]] = {
+    Http.client.url("https://api.bitfinex.com/v1/symbols_details").get.map {
       response =>
-        response.body[JsValue].as[List[String]]
+        response.body[JsValue].as[List[JsValue]].map {
+          json =>
+            val pair = (json \ "pair").as[String].toUpperCase
+            val margin = (json \ "margin").as[Boolean]
+            Symbol(pair, margin)
+        }
     }
   }
 
@@ -46,3 +51,5 @@ case class Candle(symbol: String, mts: Double, open: Double, close: Double, high
   val rate: Double = change / open
   val usdVolume: Double = close * volume
 }
+
+case class Symbol(pair: String, margin: Boolean)

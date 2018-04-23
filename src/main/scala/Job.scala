@@ -4,12 +4,14 @@ import scala.concurrent.{ExecutionContext, Future}
 class Job(implicit ec: ExecutionContext) {
   private val bitfinexFetcher = new BitfinexFetcher
 
+  //def runSlack
+
   def getAllSymbolsCandle: Future[List[Candle]] = {
     bitfinexFetcher.getAllSymbols.flatMap {
       symbols =>
         Future.sequence(symbols
-          .filter(_.endsWith("usd"))
-          .map("t" + _.toUpperCase)
+          .filter(_.pair.endsWith("usd"))
+          .map("t" + _)
           .map(s => bitfinexFetcher.getLastCandle(s, timeFrame = "6h")))
 
       /*
