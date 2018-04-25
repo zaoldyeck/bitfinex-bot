@@ -6,6 +6,7 @@ class BitfinexFetcherTest extends AsyncFunSuite {
   test("getAllSymbols") {
     bitfinexFetcher.getAllSymbols.map {
       symbols =>
+        symbols.foreach(println)
         println(symbols.size)
         assert(symbols.nonEmpty)
     }

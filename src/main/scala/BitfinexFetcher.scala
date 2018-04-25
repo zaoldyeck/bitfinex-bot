@@ -6,22 +6,22 @@ import play.api.libs.ws.JsonBodyReadables._
 import scala.concurrent.{ExecutionContext, Future}
 
 class BitfinexFetcher(implicit ec: ExecutionContext) {
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  implicit val candleReads = Json.reads[Candle]
+  private val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  private implicit val candleReads = Json.reads[Candle]
 
   def getAllSymbols: Future[List[Symbol]] = {
     Http.client.url("https://api.bitfinex.com/v1/symbols_details").get.map {
       response =>
         response.body[JsValue].as[List[JsValue]].map {
           json =>
-            val pair = (json \ "pair").as[String].toUpperCase
+            val pair: String = "t" + (json \ "pair").as[String].toUpperCase
             val margin = (json \ "margin").as[Boolean]
             Symbol(pair, margin)
         }
     }
   }
 
-  def getLastCandle(symbol: String, timeFrame: String = "1h"): Future[Candle] = {
+  def getLastCandle(symbol: String, timeFrame: String = "5m"): Future[Candle] = {
     Http.client.url(s"https://api.bitfinex.com/v2/candles/trade:$timeFrame:$symbol/last").get.map {
       response =>
         response.body[JsValue].toCandle(symbol)
@@ -33,7 +33,7 @@ class BitfinexFetcher(implicit ec: ExecutionContext) {
       Candle(symbol, 0, 0, 0, 0, 0, 0)
   }
 
-  def getHistCandle(symbol: String, timeFrame: String = "1h"): Future[List[Candle]] = {
+  def getHistCandle(symbol: String, timeFrame: String = "5m"): Future[List[Candle]] = {
     Http.client.url(s"https://api.bitfinex.com/v2/candles/trade:$timeFrame:$symbol/hist").get.map {
       response =>
         response.body[JsValue].as[List[JsValue]].map(_.toCandle(symbol))
@@ -46,10 +46,10 @@ class BitfinexFetcher(implicit ec: ExecutionContext) {
   }
 }
 
+case class Symbol(pair: String, margin: Boolean)
+
 case class Candle(symbol: String, mts: Double, open: Double, close: Double, high: Double, low: Double, volume: Double) {
   val change: Double = close - open
   val rate: Double = change / open
   val usdVolume: Double = close * volume
 }
-
-case class Symbol(pair: String, margin: Boolean)
