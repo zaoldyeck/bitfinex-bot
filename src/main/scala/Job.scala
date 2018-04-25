@@ -24,4 +24,29 @@ class Job(implicit ec: ExecutionContext) {
         """.stripMargin
     }).flatMap(new SlackBot().sendMessage(_))
   }
+
+  def alertRiseAndFall: Future[Any] = {
+    (for {
+      symbols <- bitfinexFetcher.getAllSymbols
+      candles <- task.getAllSymbolCandles(symbols)
+    } yield {
+      val risingSymbols = task.filterRisingSymbols(candles)
+      val fallingSymbols = task.filterFallingSymbols(symbols, candles)
+      if (risingSymbols.isEmpty && fallingSymbols.isEmpty) None else
+        Some(
+          s"""
+             |<!everyone>
+             |Rising Symbols:
+             | Symbol,    Rate,   Change
+             |${risingSymbols.mkString("\n")}
+             |\n
+             |Falling Symbols:
+             | Symbol,    Rate,   Change
+             |${fallingSymbols.mkString("\n")}
+        """.stripMargin)
+    }).flatMap {
+      case Some(m) => new SlackBot().sendMessage(m)
+      case None => Future.unit
+    }
+  }
 }

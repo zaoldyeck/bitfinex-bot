@@ -11,3 +11,6 @@ println(s)
 
 val s2 = "tBTCUSD"
 s2.substring(1, 4)
+
+val s3 = s2.drop(1)
+s3.dropRight(3)
