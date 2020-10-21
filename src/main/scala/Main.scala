@@ -8,7 +8,7 @@ object Main extends App {
   //implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(2))
   //implicit val ec = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
 
-  new Job().alertRiseAndFall andThen {
+  new Job().LendingUSD andThen {
     case _ => Http.terminate()
   } onComplete {
     case Success(_) =>
