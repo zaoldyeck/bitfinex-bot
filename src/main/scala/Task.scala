@@ -1,13 +1,13 @@
-import Extension._
+import Helpers._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class Task(implicit ec: ExecutionContext) {
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  private val bitfinexFetcher = new BitfinexFetcher
+  private val bitfinexFetcher = new BitfinexAPI
 
-  def getAllSymbolCandles(symbols: List[Symbol], timeFrame: String = "5m"): Future[List[Candle]] = {
+  def getAllSymbolCandles(symbols: Seq[Symbol], timeFrame: String = "5m"): Future[Seq[Candle]] = {
     Future.sequence(
       symbols
         .map(_.pair)
@@ -15,10 +15,10 @@ class Task(implicit ec: ExecutionContext) {
         .map(s => bitfinexFetcher.getLastCandle(s, timeFrame)))
   }
 
-  def filterStrongSymbols(candles: List[Candle]): List[Analysis] = {
+  def filterStrongSymbols(candles: Seq[Candle]): Seq[Analysis] = {
     val btcusd = candles.filter(_.symbol == "tBTCUSD").head
     val rate = btcusd.rate
-    Analysis(btcusd.symbol, btcusd.rate.formatRate, btcusd.change.format, 0.formatRate) ::
+    Analysis(btcusd.symbol, btcusd.rate.formatRate, btcusd.change.format, 0.formatRate) +:
       candles.sortBy(-_.usdVolume)
         .take(candles.size / 2)
         .filter(_.rate > rate)
@@ -27,11 +27,11 @@ class Task(implicit ec: ExecutionContext) {
         .map(c => Analysis(c.symbol, c.rate.formatRate, c.change.format, (c.rate - rate).formatRate))
   }
 
-  def filterWeakSymbols(symbols: List[Symbol], candles: List[Candle]): List[Analysis] = {
+  def filterWeakSymbols(symbols: Seq[Symbol], candles: Seq[Candle]): Seq[Analysis] = {
     val pairToMargin = symbols.map(symbol => symbol.pair -> symbol.margin).toMap
     val btcusd = candles.filter(_.symbol == "tBTCUSD").head
     val rate = btcusd.rate
-    Analysis(btcusd.symbol, btcusd.rate.formatRate, btcusd.change.format, 0.formatRate) ::
+    Analysis(btcusd.symbol, btcusd.rate.formatRate, btcusd.change.format, 0.formatRate) +:
       candles
         .filter(candle => pairToMargin(candle.symbol) && candle.rate < rate)
         .sortBy(_.rate)
@@ -39,7 +39,7 @@ class Task(implicit ec: ExecutionContext) {
         .map(c => Analysis(c.symbol, c.rate.formatRate, c.change.format, (c.rate - rate).formatRate))
   }
 
-  def filterRisingSymbols(candles: List[Candle]): List[Analysis] = {
+  def filterRisingSymbols(candles: Seq[Candle]): Seq[Analysis] = {
     candles.sortBy(-_.usdVolume)
       .take(candles.size / 2)
       .filter(_.rate > 0.01)
@@ -47,7 +47,7 @@ class Task(implicit ec: ExecutionContext) {
       .map(c => Analysis(c.symbol, c.rate.formatRate, c.change.format, ""))
   }
 
-  def filterFallingSymbols(symbols: List[Symbol], candles: List[Candle]): List[Analysis] = {
+  def filterFallingSymbols(symbols: Seq[Symbol], candles: Seq[Candle]): Seq[Analysis] = {
     val pairToMargin = symbols.map(symbol => symbol.pair -> symbol.margin).toMap
     candles
       .filter(candle => candle.rate < -0.01 && pairToMargin(candle.symbol))

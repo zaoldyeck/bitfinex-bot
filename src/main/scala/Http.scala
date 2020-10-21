@@ -1,9 +1,10 @@
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import play.api.libs.ws.ahc.{StandaloneAhcWSClient, StandaloneAhcWSRequest}
 
 object Http {
-  implicit private val system = ActorSystem()
+  private implicit val system = ActorSystem()
+  implicit val materializer = Materializer.matFromSystem
   system.registerOnTermination {
     System.exit(0)
   }
@@ -16,7 +17,6 @@ object Http {
   }
 
   class StandaloneAhcWSClientWithProxyPool {
-    private implicit val materializer = ActorMaterializer()
     private val client = StandaloneAhcWSClient()
 
     def url(url: String, disableUrlEncoding: Boolean = false): StandaloneAhcWSRequest = {
