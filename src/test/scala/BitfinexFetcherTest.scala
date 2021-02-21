@@ -32,6 +32,39 @@ class BitfinexFetcherTest extends AsyncFunSuite {
     }
   }
 
+  test("getWallets") {
+    bitfinexAPI.getWallets.map {
+      wallets =>
+        println(wallets)
+        assert(wallets.nonEmpty)
+    }
+  }
+
+  test("getSumOfFundingCredits") {
+    bitfinexAPI.getSumOfFundingCredits().map {
+      used =>
+        println(used)
+        assert(used >= 0)
+    }
+  }
+
+  test("getHighestRateOfActiveFundingOffers") {
+    bitfinexAPI.getHighestRateOfActiveFundingOffers().map {
+      rate =>
+        println(rate)
+        assert(rate >= 0)
+    }
+  }
+
+  test("getHighestRate") {
+    bitfinexAPI.getHistCandle("fUSD", "1m", ":p2", 60).map {
+      candles =>
+        val highestRate = BigDecimal(candles.map(_.high).max)
+        println(highestRate)
+        assert(highestRate >= 0)
+    }
+  }
+
   test("getFundingHistCandle") {
     bitfinexAPI.getHistCandle("fUSD", "1m", ":p2", 120).map {
       candles =>
