@@ -53,15 +53,46 @@ class Job(implicit ec: ExecutionContext) {
 
   def LendingUSD: Future[Unit] = {
     for {
-      wallets <- bitfinexAPI.getWallets
+      totalFunding <- bitfinexAPI.getWallets.map(wallets => wallets.filter(wallet => wallet.walletType == "funding" && wallet.currency == "USD").map(_.balance).sum)
       used <- bitfinexAPI.getSumOfFundingCredits()
-      unused <- Future(wallets.filter(wallet => wallet.walletType == "funding" && wallet.currency == "USD").map(_.balance).sum - used)
       activeHighestRate <- bitfinexAPI.getHighestRateOfActiveFundingOffers()
       highestRate <- bitfinexAPI.getHistCandle("fUSD", "1m", ":p2", 60).map(candles => candles.map(_.high).max)
-      result <- if (unused >= 50 && activeHighestRate != highestRate) bitfinexAPI.cancelAllFundingOffers().flatMap(_ => bitfinexAPI.submitFundingOffer(unused, highestRate)) else Future("Do nothing")
+      result <- {
+        val unused = totalFunding - used
+        if (unused >= 50 && activeHighestRate != highestRate) {
+          val expectedAmount = totalFunding / 12
+          val amount = if (unused >= expectedAmount) expectedAmount else unused
+          val period = highestRate match {
+            case rate if rate > 1 => 120
+            case _ => 2
+          }
+          bitfinexAPI.cancelAllFundingOffers().flatMap(_ => bitfinexAPI.submitFundingOffer(amount, highestRate, period = period))
+        } else Future("Do nothing")
+      }
     } yield {
       println(result)
     }
+
+    /*
+    for {
+      wallets <- bitfinexAPI.getWallets
+      used <- bitfinexAPI.getSumOfFundingCredits()
+      activeHighestRate <- bitfinexAPI.getHighestRateOfActiveFundingOffers()
+      highestRate <- bitfinexAPI.getHistCandle("fUSD", "1m", ":p2", 60).map(candles => candles.map(_.high).max)
+      result <- {
+        val unused = wallets.filter(wallet => wallet.walletType == "funding" && wallet.currency == "USD").map(_.balance).sum - used
+        if (unused >= 50 && activeHighestRate != highestRate) {
+          val period = highestRate match {
+            case rate if rate > 1 => 120
+            case _ => 2
+          }
+          bitfinexAPI.cancelAllFundingOffers().flatMap(_ => bitfinexAPI.submitFundingOffer(unused, highestRate, period = period))
+        } else Future("Do nothing")
+      }
+    } yield {
+      println(result)
+    }
+     */
   }
 }
 
